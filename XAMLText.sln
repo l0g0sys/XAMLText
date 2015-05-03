@@ -1,0 +1,28 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Express 2013 for Windows Desktop
+VisualStudioVersion = 12.0.31101.0
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "XAMLText", "XAMLText\XAMLText.csproj", "{0A9154B1-2FF2-44B3-9BB6-20A892B377DF}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Debug|x86 = Debug|x86
+		Release|Any CPU = Release|Any CPU
+		Release|x86 = Release|x86
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{0A9154B1-2FF2-44B3-9BB6-20A892B377DF}.Debug|Any CPU.ActiveCfg = Debug|x86
+		{0A9154B1-2FF2-44B3-9BB6-20A892B377DF}.Debug|Any CPU.Build.0 = Debug|x86
+		{0A9154B1-2FF2-44B3-9BB6-20A892B377DF}.Debug|x86.ActiveCfg = Debug|x86
+		{0A9154B1-2FF2-44B3-9BB6-20A892B377DF}.Debug|x86.Build.0 = Debug|x86
+		{0A9154B1-2FF2-44B3-9BB6-20A892B377DF}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{0A9154B1-2FF2-44B3-9BB6-20A892B377DF}.Release|Any CPU.Build.0 = Release|Any CPU
+		{0A9154B1-2FF2-44B3-9BB6-20A892B377DF}.Release|x86.ActiveCfg = Release|x86
+		{0A9154B1-2FF2-44B3-9BB6-20A892B377DF}.Release|x86.Build.0 = Release|x86
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal
