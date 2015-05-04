@@ -1,0 +1,21 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<!-- Prolog -->
+<Root>
+    <Child>
+        Content
+    </Child>
+    <Child/>
+    <!-- Comment -->
+    <?processingInstruction param="1" ?>
+    &amp;
+    &#xA0;
+    &#160;
+    <Element Attribute="'entities&apos;" Attribute2='"entities&quot;' />
+    <Element Attribute="&#x21;&#x9;&#9;&#63;" />
+    <l:Catalog xmlns:l="http://example.com" Message="Translate\nthis"/>             <l:Catalog xmlns:l="http://example.com" Message="On same line"/>
+    <![CDATA[
+    CData section
+    ]]>
+    <l:Catalog xmlns:l="http://example.com" Message="And	this"/>
+</Root>
+<!-- Epilog -->
