@@ -1,9 +1,6 @@
 ﻿using System;
-using System.CodeDom;
-using System.CodeDom.Compiler;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using XML = XAMLText;
@@ -66,11 +63,16 @@ namespace XAMLText
         // Invoked when start tag of element was encountered.
         static void StartElement(string tagName, Dictionary<string, string> attrs, bool empty)
         {
-            if (tagName != "l:Catalog") return;
-            if (attrs.Count == 0) return;
-            if (!attrs.ContainsKey("Message")) return;
+            if (tagName != "l:Catalog" || attrs.Count == 0 || !attrs.ContainsKey("Message")) return;
 
-            WriteMessage(XML.LineNumber, attrs["Message"]);
+            if (attrs.ContainsKey("Plural"))
+            {
+                if (!attrs.ContainsKey("N")) return;
+
+                WritePlural(XML.LineNumber, attrs["Message"], attrs["Plural"], attrs["N"], attrs.ContainsKey("Context") ? attrs["Context"] : null);
+            }
+            else
+                WriteMessage(XML.LineNumber, attrs["Message"], attrs.ContainsKey("Context") ? attrs["Context"] : null);
         }
 
         // Converts message string into literal string.
@@ -95,7 +97,7 @@ namespace XAMLText
         }
 
         // Writes message to output.
-        static void WriteMessage(int lineno, string message)
+        static void WriteMessage(int lineno, string message, string context)
         {
             try
             {
@@ -106,7 +108,10 @@ namespace XAMLText
                     ++Line;
                 }
 
-                Writer.Write("L10n.Message(\"{0}\"); ", ToLiteral(message));
+                if (context == null)
+                    Writer.Write("L10n.Message(\"{0}\"); ", ToLiteral(message));
+                else
+                    Writer.Write("L10n.Message(\"{0}\", \"{1}\"); ", ToLiteral(message), ToLiteral(context));
             }
             catch (Exception e)
             {
@@ -115,5 +120,28 @@ namespace XAMLText
             }
         }
 
+        // Writes plural message to output.
+        static void WritePlural(int lineno, string message, string plural, string n, string context)
+        {
+            try
+            {
+                // Output new lines to align line numbers.
+                while (lineno > Line)
+                {
+                    Writer.WriteLine();
+                    ++Line;
+                }
+
+                if (context == null)
+                    Writer.Write("L10n.Plural(\"{0}\", \"{1}\", \"{2}\");", ToLiteral(message), ToLiteral(plural), ToLiteral(n));
+                else
+                    Writer.Write("L10n.Plural(\"{0}\", \"{1}\", \"{2}\", \"{3}\"); ", ToLiteral(message), ToLiteral(plural), ToLiteral(n), ToLiteral(context));
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(String.Format("Write error: {0}", e.Message));
+                XML.Stop();
+            }
+        }
     }
 }
