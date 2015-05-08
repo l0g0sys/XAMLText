@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
-using System.Threading.Tasks;
 using XML = XAMLText;
 
 namespace XAMLText
@@ -46,7 +45,7 @@ namespace XAMLText
 
             } catch (Exception e)
             {
-                Console.WriteLine(String.Format("Write error: {0}", e.Message));
+                Console.WriteLine(string.Format("Write error: {0}", e.Message));
 
                 return Exit(1);
             }
@@ -91,7 +90,7 @@ namespace XAMLText
         // Displays usage.
         static int Usage()
         {
-            Console.WriteLine(String.Format("Usage: {0} <input-file> <output-file>", "XAMLText"));
+            Console.WriteLine(string.Format("Usage: {0} <input-file> <output-file>", "XAMLText"));
 
             return 1;
         }
@@ -115,7 +114,7 @@ namespace XAMLText
             }
             catch (Exception e)
             {
-                Console.WriteLine(String.Format("Write error: {0}", e.Message));
+                Console.WriteLine(string.Format("Write error: {0}", e.Message));
                 XML.Stop();
             }
         }
@@ -139,7 +138,7 @@ namespace XAMLText
             }
             catch (Exception e)
             {
-                Console.WriteLine(String.Format("Write error: {0}", e.Message));
+                Console.WriteLine(string.Format("Write error: {0}", e.Message));
                 XML.Stop();
             }
         }

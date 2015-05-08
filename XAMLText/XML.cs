@@ -62,7 +62,7 @@ namespace XAMLText
             if (!Next(quote)) return Error("Quote");
 
 #if (DEBUG)
-            Console.WriteLine(String.Format("@{0}", name));
+            Console.WriteLine(string.Format("@{0}", name));
 #endif
             return true;
         }
@@ -139,7 +139,7 @@ namespace XAMLText
         static void Dump(string fn = null, string token = null)
         {
 #if (DEBUG)
-            Console.WriteLine(String.Format("{0}({1}) Input: \"{2}\"", fn,
+            Console.WriteLine(string.Format("{0}({1}) Input: \"{2}\"", fn,
                                             token,
                                             input.Length > 40 ? input.Substring(0, 40) : input));
 #endif
@@ -183,7 +183,7 @@ namespace XAMLText
             {
                 // Element
 #if (DEBUG)
-                Console.WriteLine(String.Format("<{0}/> on line {1}", tagName, line));
+                Console.WriteLine(string.Format("<{0}/> on line {1}", tagName, line));
 #endif
                 if (StartElement != null) StartElement(tagName, attrs, true);
 
@@ -193,7 +193,7 @@ namespace XAMLText
 
             // Element
 #if (DEBUG)
-            Console.WriteLine(String.Format("<{0}> on line {1}", tagName, line));
+            Console.WriteLine(string.Format("<{0}> on line {1}", tagName, line));
 #endif
             if (StartElement != null) StartElement(tagName, attrs, false);
 
@@ -205,7 +205,7 @@ namespace XAMLText
 
             // </Element>
 #if (DEBUG)
-            Console.WriteLine(String.Format("</{0}>", tagName));
+            Console.WriteLine(string.Format("</{0}>", tagName));
 #endif
             return true;
         }
@@ -217,7 +217,7 @@ namespace XAMLText
 
         static bool Error(string message = null)
         {
-            Console.WriteLine(String.Format("Error: {0}", message));
+            Console.WriteLine(string.Format("Error: {0}", message));
 
             Input = "";
 
@@ -340,7 +340,7 @@ namespace XAMLText
 
             // XML declaration.
 #if (DEBUG)
-            Console.WriteLine(String.Format("<?{0}?>", piName));
+            Console.WriteLine(string.Format("<?{0}?>", piName));
 #endif
             S();
 
@@ -435,7 +435,7 @@ namespace XAMLText
             if (!Next(";")) return Error("Reference");
 
 #if (DEBUG)
-            Console.WriteLine(String.Format("&{0};", name));
+            Console.WriteLine(string.Format("&{0};", name));
 #endif
             return true;
         }
