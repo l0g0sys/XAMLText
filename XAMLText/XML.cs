@@ -136,14 +136,15 @@ namespace XAMLText
             if (name == "xmlns")
                 return Scope.Declare("", value);
             else
-            {
-                string ns, localName, prefix;
-                if (!ExpandName(name, out ns, out localName, out prefix))
-                    return false;
+                if (name.StartsWith("xmlns:"))
+                {
+                    string ns, localName, prefix;
+                    if (!ExpandName(name, out ns, out localName, out prefix))
+                        return false;
 
-                if (ns == XMLNS)
-                    return Scope.Declare(localName, value);
-            }
+                    if (ns == XMLNS)
+                        return Scope.Declare(localName, value);
+                }
 
             return true;
         }

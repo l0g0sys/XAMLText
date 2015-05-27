@@ -1,6 +1,6 @@
 ﻿<?xml version="1.0" encoding="utf-8" ?>
 <!-- Prolog -->
-<Root xmlns:l="clr-namespace:POESKillTree.Localization.XAML">
+<Root l:Declared="Later" xmlns:l="clr-namespace:POESKillTree.Localization.XAML">
     <Child>
         Content
     </Child>
