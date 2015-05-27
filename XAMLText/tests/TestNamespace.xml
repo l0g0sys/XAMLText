@@ -1,6 +1,6 @@
 ﻿<?xml version="1.0" encoding="utf-8" ?>
 <!-- Prolog -->
-<Root>
+<Root xmlns:l="clr-namespace:POESKillTree.Localization.XAML">
     <Child>
         Content
     </Child>
@@ -12,10 +12,13 @@
     &#160;
     <Element Attribute="'entities&apos;" Attribute2='"entities&quot;' />
     <Element Attribute="&#x21;&#x9;&#9;&#63;" />
-    <l:Catalog xmlns:l="clr-namespace:POESKillTree.Localization.XAML" Message="Translate\nthis"/>             <l:Catalog xmlns:l="clr-namespace:POESKillTree.Localization.XAML" Message="On same line"/>
+    <l:Catalog Message="Translate\nthis"/>             <l:Catalog Message="On same line"/>
     <![CDATA[
     CData section
     ]]>
-    <l:Catalog xmlns:l="clr-namespace:POESKillTree.Localization.XAML" Message="And	this"/>
+    <l:Catalog Message="And	this"/>
+    <l:Catalog Message="Message" Context="Context"/>
+    <l:Catalog Message="Message" Plural="Plural" N="2"/>
+    <l:Catalog Message="Message" Plural="Plural" N="2" Context="Context"/>
 </Root>
 <!-- Epilog -->

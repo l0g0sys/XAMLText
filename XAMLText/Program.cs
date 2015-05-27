@@ -60,9 +60,9 @@ namespace XAMLText
         }
 
         // Invoked when start tag of element was encountered.
-        static void StartElement(string tagName, Dictionary<string, string> attrs, bool empty)
+        static void StartElement(string ns, string localName, Dictionary<string, string> attrs, bool empty)
         {
-            if (tagName != "l:Catalog" || attrs.Count == 0 || !attrs.ContainsKey("Message")) return;
+            if (localName != "Catalog" || ns != "clr-namespace:POESKillTree.Localization.XAML" || attrs.Count == 0 || !attrs.ContainsKey("Message")) return;
 
             if (attrs.ContainsKey("Plural"))
             {
@@ -132,9 +132,9 @@ namespace XAMLText
                 }
 
                 if (context == null)
-                    Writer.Write("L10n.Plural(\"{0}\", \"{1}\", \"{2}\");", ToLiteral(message), ToLiteral(plural), ToLiteral(n));
+                    Writer.Write("L10n.Plural(\"{0}\", \"{1}\", {2});", ToLiteral(message), ToLiteral(plural), n);
                 else
-                    Writer.Write("L10n.Plural(\"{0}\", \"{1}\", \"{2}\", \"{3}\"); ", ToLiteral(message), ToLiteral(plural), ToLiteral(n), ToLiteral(context));
+                    Writer.Write("L10n.Plural(\"{0}\", \"{1}\", {2}, \"{3}\"); ", ToLiteral(message), ToLiteral(plural), n, ToLiteral(context));
             }
             catch (Exception e)
             {
