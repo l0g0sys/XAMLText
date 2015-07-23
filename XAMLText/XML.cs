@@ -2,54 +2,28 @@
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
-using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
-using System.Threading.Tasks;
 
-namespace XAMLText
+namespace XMLParser
 {
-    class XML
+    public class XML
     {
         // Namespace scope.
-        class Scope
+        class NSScope
         {
-            static Dictionary<string, string> NS = new Dictionary<string, string>();
+            // Declared namespaces in current scope.
+            private Dictionary<string, string> Current = new Dictionary<string, string>();
 
-            static Stack<Dictionary<string, string>> Stack = new Stack<Dictionary<string, string>>();
+            // Last error message.
+            public string Error;
 
-            // Begins namespace declarations.
-            internal static void Begin()
-            {
-                NS.Clear();
-            }
-
-            // Declares namespace.
-            internal static bool Declare(string prefix, string ns)
-            {
-                // Namespace constraint: No Prefix Undeclaring
-                if (string.IsNullOrEmpty(ns))
-                    return Error("Namespace declaration error");
-
-                if (NS.ContainsKey(prefix))
-                    return Error("Duplicit namespace declaration");
-
-                NS.Add(prefix, ns);
-
-                return true;
-            }
-
-            // Ends namespace declarations.
-            internal static void End()
-            {
-                Stack.Push(NS.Count > 0 ? new Dictionary<string, string>(NS) : null);
-            }
+            // Stack of namespace scopes.
+            private Stack<Dictionary<string, string>> Stack = new Stack<Dictionary<string, string>>();
 
             // Initializes scope.
-            internal static void Initialize()
+            public NSScope()
             {
-                Stack.Clear();
-
                 Stack.Push(
                     new Dictionary<string, string>()
                     {
@@ -58,18 +32,53 @@ namespace XAMLText
                 );
             }
 
+            // Begins namespace declarations.
+            public void Begin()
+            {
+                Current.Clear();
+            }
+
+            // Declares namespace.
+            public bool Declare(string prefix, string ns)
+            {
+                // Namespace constraint: No Prefix Undeclaring
+                if (string.IsNullOrEmpty(ns))
+                {
+                    Error = "Namespace declaration error";
+
+                    return false;
+                }
+
+                if (Current.ContainsKey(prefix))
+                {
+                    Error = "Duplicit namespace declaration";
+
+                    return false;
+                }
+
+                Current.Add(prefix, ns);
+
+                return true;
+            }
+
+            // Ends namespace declarations.
+            public void End()
+            {
+                Stack.Push(Current.Count > 0 ? new Dictionary<string, string>(Current) : null);
+            }
+
             // Leaves namespace scope.
-            internal static void Leave()
+            public void Leave()
             {
                 Stack.Pop();
             }
 
             // Resolves prefix.
-            internal static string Resolve(string prefix)
+            public string Resolve(string prefix)
             {
-                foreach (Dictionary<string, string> NS in Stack)
-                    if (NS != null && NS.ContainsKey(prefix))
-                        return NS[prefix];
+                foreach (Dictionary<string, string> ns in Stack)
+                    if (ns != null && ns.ContainsKey(prefix))
+                        return ns[prefix];
 
                 return null;
             }
@@ -79,24 +88,37 @@ namespace XAMLText
         public const string NAMESPACE = "http://www.w3.org/XML/1998/namespace";
         public const string XMLNS = "http://www.w3.org/2000/xmlns/";
 
-        public delegate void OnStartElement(string ns, string localName, Dictionary<string, string> attrs, bool empty);
+        // Delegates.
+        public delegate void OnStartElement(XML xml, string ns, string localName, Dictionary<string, string> attrs, bool empty);
 
-        public static int LineNumber { get { return LineNo;  } }
+        // The flag indicating that error has occured.
+        private bool HasError;
 
-        public static OnStartElement StartElement;
+        // The input XML string.
+        private string Input;
 
-        static string Input;
+        // Input length.
+        private int Length { get { return Input.Length; } }
 
-        static bool HasError;
+        // Current line number.
+        private int LineNo;
 
-        static int LineNo;
+        // Current line number.
+        public int LineNumber { get { return LineNo; } }
 
-        static readonly Regex ReNewLine = new Regex(@"\r\n?|\n");
+        // Namespace scope.
+        private NSScope Scope;
+
+        // ...
+        public OnStartElement StartElement;
+
+        // Regular expression to match new line.
+        private static readonly Regex ReNewLine = new Regex(@"\r\n?|\n");
 
         /* Attribute ::= Name Eq AttValue
          * AttValue ::= '"' ([^<&"] | Reference)* '"' |  "'" ([^<&'] | Reference)* "'"
          */
-        static bool Attribute(out string name, out string value)
+        private bool Attribute(out string name, out string value)
         {
             name = value = null;
 
@@ -134,7 +156,10 @@ namespace XAMLText
 #endif
 
             if (name == "xmlns")
-                return Scope.Declare("", value);
+            {
+                if (!Scope.Declare("", value))
+                    return Error(Scope.Error);
+            }
             else
                 if (name.StartsWith("xmlns:"))
                 {
@@ -143,7 +168,11 @@ namespace XAMLText
                         return false;
 
                     if (ns == XMLNS)
-                        return Scope.Declare(localName, value);
+                    {
+                        if (!Scope.Declare(localName, value))
+                            return Error(Scope.Error);
+                    }
+                        
                 }
 
             return true;
@@ -155,7 +184,7 @@ namespace XAMLText
          * Char ::= #x9 | #xA | #xD | [#x20-#xD7FF] | [#xE000-#xFFFD] | [#x10000-#x10FFFF]
          * CDEnd ::= ']]>'
          */
-        static bool CDSect()
+        private bool CDSect()
         {
             if (!Next("<![CDATA[")) return false;
 
@@ -171,7 +200,7 @@ namespace XAMLText
 
         /* CharData ::= [^<&]* - ([^<&]* ']]>' [^<&]*)
          */
-        static bool CharData()
+        private bool CharData()
         {
             if (EOF) return false;
 
@@ -188,7 +217,7 @@ namespace XAMLText
         /* Comment ::= '<!--' ((Char - '-') | ('-' (Char - '-')))* '-->'
          * Char ::= #x9 | #xA | #xD | [#x20-#xD7FF] | [#xE000-#xFFFD] | [#x10000-#x10FFFF]
          */
-        static bool Comment()
+        private bool Comment()
         {
             if (!Next("<!--")) return false;
 
@@ -204,7 +233,7 @@ namespace XAMLText
 
         /* content ::= CharData? ((element | Reference | CDSect | PI | Comment) CharData?)*
          */
-        static bool Content()
+        private bool Content()
         {
             if (EOF) return false;
 
@@ -220,19 +249,19 @@ namespace XAMLText
 
         /* doctypedecl ::= '<!DOCTYPE' S Name (S ExternalID)? S? ('[' intSubset ']' S?)? '>'
          */
-        static bool DocTypeDecl()
+        private bool DocTypeDecl()
         {
             return false;
         }
 
-        static bool EOF { get { return Input.Length == 0; } }
+        private bool EOF { get { return Input.Length == 0; } }
 
         /* element ::= EmptyElemTag | STag content ETag
          * EmptyElemTag ::= '<' Name (S Attribute)* S? '/>'
          * STag ::= '<' Name (S Attribute)* S? '>'
          * ETag ::= '</' Name S? '>'
          */
-        static bool Element()
+        private bool Element()
         {
             // Don't match '<' in '</'.
             if (Peek("</")) return false;
@@ -264,7 +293,7 @@ namespace XAMLText
 #if (DEBUG)
                 Console.WriteLine(string.Format("<{0}/> on line {1}", startTag, line));
 #endif
-                if (StartElement != null) StartElement(ns, localName, attrs, true);
+                if (StartElement != null) StartElement(this, ns, localName, attrs, true);
 
                 Scope.Leave();
 
@@ -278,7 +307,7 @@ namespace XAMLText
 #if (DEBUG)
             Console.WriteLine(string.Format("<{0}> on line {1}", startTag, line));
 #endif
-            if (StartElement != null) StartElement(ns, localName, attrs, false);
+            if (StartElement != null) StartElement(this, ns, localName, attrs, false);
 
             Content();
 
@@ -298,12 +327,12 @@ namespace XAMLText
             return true;
         }
 
-        static bool Eq()
+        private bool Eq()
         {
             return NextRE(@"\s*=\s*");
         }
 
-        static bool Error(string message = null, bool showLineNo = false)
+        private bool Error(string message = null, bool showLineNo = false)
         {
             // Error was already reported.
             if (HasError) return false;
@@ -319,7 +348,7 @@ namespace XAMLText
             return false;
         }
 
-        static bool ExpandName(string name, out string ns, out string localName, out string prefix)
+        private bool ExpandName(string name, out string ns, out string localName, out string prefix)
         {
             ns = localName = prefix = null;
 
@@ -363,13 +392,11 @@ namespace XAMLText
             return true;
         }
 
-        static int Length { get { return Input.Length; } }
-
         /* Name ::= NameStartChar (NameChar)*
          * NameStartChar ::= ":" | [A-Z] | "_" | [a-z] | [#xC0-#xD6] | [#xD8-#xF6] | [#xF8-#x2FF] | [#x370-#x37D] | [#x37F-#x1FFF] | [#x200C-#x200D] | [#x2070-#x218F] | [#x2C00-#x2FEF] | [#x3001-#xD7FF] | [#xF900-#xFDCF] | [#xFDF0-#xFFFD] | [#x10000-#xEFFFF]
          * NameChar ::= NameStartChar | "-" | "." | [0-9] | #xB7 | [#x0300-#x036F] | [#x203F-#x2040]
          */
-        static bool Name(out string tagName)
+        private bool Name(out string tagName)
         {
             string NameStartChar = @"[:A-Z_a-z\xC0-\xD6\xD8-\xF6\u00F8-\u02FF\u0370-\u037D\u037F-\u1FFF\u200C-\u200D\u2070-\u218F\u2C00-\u2FEF\u3001-\uD7FF\uF900-\uFDCF\uFDF0-\uFFFD]",
                    NameChar = @"[:A-Z_a-z\xC0-\xD6\xD8-\xF6\u00F8-\u02FF\u0370-\u037D\u037F-\u1FFF\u200C-\u200D\u2070-\u218F\u2C00-\u2FEF\u3001-\uD7FF\uF900-\uFDCF\uFDF0-\uFFFD.0-9\xB7\u0300-\u036F\u203F-\u2040-]*";
@@ -388,7 +415,7 @@ namespace XAMLText
             return true;
         }
 
-        static bool Next(string token)
+        private bool Next(string token)
         {
             if (EOF || Length < token.Length) return false;
 
@@ -401,7 +428,7 @@ namespace XAMLText
             return true;
         }
 
-        static bool NextRE(string regex)
+        private bool NextRE(string regex)
         {
             if (EOF) return false;
 
@@ -417,7 +444,7 @@ namespace XAMLText
             return true;
         }
 
-        static bool NextRE(string regex, out string match)
+        private bool NextRE(string regex, out string match)
         {
             match = null;
 
@@ -437,24 +464,9 @@ namespace XAMLText
             return true;
         }
 
-        // Starts parsing of XML file.
-        public static bool Parse(string path)
+        // Starts parsing.
+        public bool Parse()
         {
-            try
-            {
-                Input = File.ReadAllText(path, Encoding.UTF8);
-            }
-            catch
-            {
-                return false;
-            }
-            if (Input == null) return false;
-
-            HasError = false;
-            LineNo = 1;
-
-            Scope.Initialize();
-
             if (EOF) return true;
             Prolog();
             if (EOF) return true;
@@ -462,14 +474,14 @@ namespace XAMLText
             return Element();
         }
 
-        static bool Peek(string token)
+        private bool Peek(string token)
         {
             if (EOF || Length < token.Length) return false;
 
             return Input.StartsWith(token);
         }
 
-        static bool PI()
+        private bool PI()
         {
             string piName;
 
@@ -492,7 +504,7 @@ namespace XAMLText
         /* prolog ::= XMLDecl? Misc* (doctypedecl Misc*)?
          * Misc ::= Comment | PI | S
          */
-        static bool Prolog()
+        private bool Prolog()
         {
             XMLDecl();
 
@@ -509,7 +521,7 @@ namespace XAMLText
          * EntityRef ::= '&' Name ';'
          * CharRef ::= '&#' [0-9]+ ';' | '&#x' [0-9a-fA-F]+ ';'
          */
-        static bool Reference(out string value)
+        private bool Reference(out string value)
         {
             string name;
 
@@ -582,7 +594,7 @@ namespace XAMLText
             return true;
         }
 
-        static bool S()
+        private bool S()
         {
             if (EOF) return false;
 
@@ -590,14 +602,25 @@ namespace XAMLText
         }
 
         // Stops parsing.
-        public static void Stop()
+        public void Stop()
         {
             Input = "";
         }
 
+        public XML(string path)
+        {
+            Input = File.ReadAllText(path, Encoding.UTF8);
+
+            HasError = false;
+
+            LineNo = 1;
+
+            Scope = new NSScope();
+        }
+
         /* XMLDecl ::= '<?xml' VersionInfo EncodingDecl? SDDecl? S? '?>'
          */
-        static bool XMLDecl()
+        private bool XMLDecl()
         {
             if (!Next("<?xml")) return false;
 

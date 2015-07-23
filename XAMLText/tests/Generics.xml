@@ -12,10 +12,8 @@
     &#160;
     <Element Attribute="'entities&apos;" Attribute2='"entities&quot;' />
     <Element Attribute="&#x21;&#x9;&#9;&#63;" />
-    <l:Catalog xmlns:l="clr-namespace:POESKillTree.Localization.XAML" Message="Translate\nthis"/>             <l:Catalog xmlns:l="clr-namespace:POESKillTree.Localization.XAML" Message="On same line"/>
     <![CDATA[
     CData section
     ]]>
-    <l:Catalog xmlns:l="clr-namespace:POESKillTree.Localization.XAML" Message="And	this"/>
 </Root>
 <!-- Epilog -->

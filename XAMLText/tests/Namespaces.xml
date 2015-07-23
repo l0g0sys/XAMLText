@@ -1,21 +1,7 @@
 ﻿<?xml version="1.0" encoding="utf-8" ?>
 <!-- Prolog -->
 <Root l:Declared="Later" xmlns:l="clr-namespace:POESKillTree.Localization.XAML">
-    <Child>
-        Content
-    </Child>
-    <Child/>
-    <!-- Comment -->
-    <?processingInstruction param="1" ?>
-    &amp;
-    &#xA0;
-    &#160;
-    <Element Attribute="'entities&apos;" Attribute2='"entities&quot;' />
-    <Element Attribute="&#x21;&#x9;&#9;&#63;" />
     <l:Catalog Message="Translate\nthis"/>             <l:Catalog Message="On same line"/>
-    <![CDATA[
-    CData section
-    ]]>
     <l:Catalog Message="And	this"/>
     <l:Catalog Message="Message" Context="Context"/>
     <l:Catalog Message="Message" Plural="Plural" N="2"/>

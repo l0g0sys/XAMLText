@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
-using XML = XAMLText;
+using XMLParser;
 
 namespace XAMLText
 {
@@ -15,7 +15,7 @@ namespace XAMLText
         // Output filename.
         static string Output;
         // Output writer.
-        static StreamWriter Writer;
+        static TextWriter Writer;
 
         // Known control characters replaceable with \-escaped literals.
         static string[] ControlCharacters = { "\a", "\b", "\f", "\n", "\r", "\t", "\v" };
@@ -25,7 +25,7 @@ namespace XAMLText
         static int Exit(int errno)
         {
             // Cleanup.
-            if (Writer != null) Writer.Dispose();
+            if (Output != null && Writer != null) Writer.Dispose();
 
             return errno;
         }
@@ -33,26 +33,39 @@ namespace XAMLText
         // Main entry point.
         static int Main(string[] args)
         {
-            if (args.Length < 2)
+            if (args.Length < 1)
                 return Exit(Usage());
 
             Input = args[0];
-            Output = args[1];
+            if (args.Length == 2)
+                Output = args[1];
 
             try
             {
-                Writer = new StreamWriter(Output);
+                Writer = Output == null ? Console.Out : new StreamWriter(Output);
 
-            } catch (Exception e)
+            }
+            catch (Exception e)
             {
                 Console.WriteLine(string.Format("Write error: {0}", e.Message));
 
                 return Exit(1);
             }
 
-            XML.StartElement = StartElement;
+            XML xml;
+            try
+            {
+                xml = new XML(Input);
+                xml.StartElement = StartElement;
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(string.Format("Read error: {0}", e.Message));
 
-            bool success = XML.Parse(Input);
+                return Exit(1);
+            }
+
+            bool success = xml.Parse();
 
             if (success) Writer.WriteLine();
 
@@ -60,7 +73,7 @@ namespace XAMLText
         }
 
         // Invoked when start tag of element was encountered.
-        static void StartElement(string ns, string localName, Dictionary<string, string> attrs, bool empty)
+        static void StartElement(XML xml, string ns, string localName, Dictionary<string, string> attrs, bool empty)
         {
             if (localName != "Catalog" || ns != "clr-namespace:POESKillTree.Localization.XAML" || attrs.Count == 0 || !attrs.ContainsKey("Message")) return;
 
@@ -68,10 +81,10 @@ namespace XAMLText
             {
                 if (!attrs.ContainsKey("N")) return;
 
-                WritePlural(XML.LineNumber, attrs["Message"], attrs["Plural"], attrs["N"], attrs.ContainsKey("Context") ? attrs["Context"] : null);
+                WritePlural(xml, attrs["Message"], attrs["Plural"], attrs["N"], attrs.ContainsKey("Context") ? attrs["Context"] : null);
             }
             else
-                WriteMessage(XML.LineNumber, attrs["Message"], attrs.ContainsKey("Context") ? attrs["Context"] : null);
+                WriteMessage(xml, attrs["Message"], attrs.ContainsKey("Context") ? attrs["Context"] : null);
         }
 
         // Converts message string into literal string.
@@ -90,18 +103,18 @@ namespace XAMLText
         // Displays usage.
         static int Usage()
         {
-            Console.WriteLine(string.Format("Usage: {0} <input-file> <output-file>", "XAMLText"));
+            Console.WriteLine(string.Format("Usage: {0} <input-file> [output-file]", "XAMLText"));
 
             return 1;
         }
 
         // Writes message to output.
-        static void WriteMessage(int lineno, string message, string context)
+        static void WriteMessage(XML xml, string message, string context)
         {
             try
             {
                 // Output new lines to align line numbers.
-                while (lineno > Line)
+                while (xml.LineNumber > Line)
                 {
                     Writer.WriteLine();
                     ++Line;
@@ -115,17 +128,17 @@ namespace XAMLText
             catch (Exception e)
             {
                 Console.WriteLine(string.Format("Write error: {0}", e.Message));
-                XML.Stop();
+                xml.Stop();
             }
         }
 
         // Writes plural message to output.
-        static void WritePlural(int lineno, string message, string plural, string n, string context)
+        static void WritePlural(XML xml, string message, string plural, string n, string context)
         {
             try
             {
                 // Output new lines to align line numbers.
-                while (lineno > Line)
+                while (xml.LineNumber > Line)
                 {
                     Writer.WriteLine();
                     ++Line;
@@ -139,7 +152,7 @@ namespace XAMLText
             catch (Exception e)
             {
                 Console.WriteLine(string.Format("Write error: {0}", e.Message));
-                XML.Stop();
+                xml.Stop();
             }
         }
     }
