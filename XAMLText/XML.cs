@@ -140,9 +140,11 @@ namespace XMLParser
                 if (NextRE("[^<&" + Regex.Escape(quote) + "]*", out val))
                     value += val;
 
-                if (Peek("&"))
+                if (Peek("<"))
+                    return Error("Quote");
+                else if (Peek("&"))
                 {
-                    if (! Reference(out val)) return false;
+                    if (!Reference(out val)) return false;
 
                     value += val;
                 }

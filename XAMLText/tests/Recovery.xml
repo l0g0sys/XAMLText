@@ -1,6 +1,6 @@
 ﻿<?xml version="1.0" encoding="utf-8" ?>
 <Root>
-    <MissingAttributeQuote Good="Good" Bad="Bad" />
+    <MissingAttributeQuote Good="Good" Bad="Bad />
     <MissingAttributeQuote Good="Good" Bad="Bad">
         <Processed />
     </MissingAttributeQuote>
