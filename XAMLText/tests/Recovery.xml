@@ -1,7 +1,12 @@
 ﻿<?xml version="1.0" encoding="utf-8" ?>
 <Root>
-    <MissingAttributeQuote Good="Good" Bad="Bad />
-    <MissingAttributeQuote Good="Good" Bad="Bad">
-        <Processed />
-    </MissingAttributeQuote>
+    <DupliciteAttribute Good="Good" Good="Good" />
+    <MissingRequiredWhitespace Good="Good"Bad="Bad" />
+    <MissingAttributeValue Good="Good" Bad Good2="Good" />
+    <MissingAttributeValue Good="Good" Bad= Good2="Good" />
+    <MissingQuotesOnAttributeValue Good="Good" Bad=Bad Good2="Good" />
+    <MissingQuotesOnAttributeValue Good="Good" Bad=&#32; Good2="Good" /><!-- &#32; isn't treated as attribute value in VS -->
+    <MissingAttributeName Good="Good" ="Text" Good2="Good" />
+    <MissingAttributeName Good="Good" "Text" Good2="Good" />
+    <Valid/>
 </Root>

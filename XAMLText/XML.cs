@@ -91,8 +91,17 @@ namespace XMLParser
         // Delegates.
         public delegate void OnStartElement(XML xml, string ns, string localName, Dictionary<string, string> attrs, bool empty);
 
-        // The flag indicating that error has occured.
-        private bool HasError;
+        // Internal list of errors.
+        private List<string> ErrorList = new List<string>();
+
+        // The error(s) encountered.
+        public string[] Errors { get { return ErrorList.ToArray(); } }
+
+        // The flag indicating whether error has occured.
+        private bool HasError = false;
+
+        // The flag indicating whether consumed string has trailing space.
+        private bool HasTrailingSpace = false;
 
         // The input XML string.
         private string Input;
@@ -101,19 +110,25 @@ namespace XMLParser
         private int Length { get { return Input.Length; } }
 
         // Current line number.
-        private int LineNo;
+        private int LineNo = 1;
 
         // Current line number.
         public int LineNumber { get { return LineNo; } }
 
+        // The flag indicating whether error recovery is enabled.
+        public bool Recoverable = false;
+
         // Namespace scope.
         private NSScope Scope;
 
-        // ...
+        // Start element handler.
         public OnStartElement StartElement;
 
         // Regular expression to match new line.
         private static readonly Regex ReNewLine = new Regex(@"\r\n?|\n");
+
+        // Regular expression to match trailing whitespace.
+        private static readonly Regex ReTrailingWhitespace = new Regex(@"\s$");
 
         /* Attribute ::= Name Eq AttValue
          * AttValue ::= '"' ([^<&"] | Reference)* '"' |  "'" ([^<&'] | Reference)* "'"
@@ -122,36 +137,70 @@ namespace XMLParser
         {
             name = value = null;
 
-            if (!S()) return false;
+            bool hasName = Name(out name);
+            if (!Recoverable && !hasName) return false;
 
-            if (!Name(out name)) return false;
-
-            if (!Eq()) return Error("Attribute");
+            bool hasEq = Eq();
+            if (!Recoverable && !hasEq) return Error("Missing attribute value");
 
             string quote = Peek("\"") ? "\"" : (Peek("'") ? "'" : null);
-            if (quote == null) return Error("Quote");
+            bool hasQuote = quote != null;
+            if (!Recoverable && !hasQuote) return Error("Missing quotes on attribute value");
 
-            Next(quote);
-
-            value = "";
-            do
+            if (hasQuote)
             {
-                string val;
-                if (NextRE("[^<&" + Regex.Escape(quote) + "]*", out val))
-                    value += val;
+                Next(quote);
 
-                if (Peek("<"))
-                    return Error("Quote");
-                else if (Peek("&"))
+                value = "";
+                do
                 {
-                    if (!Reference(out val)) return false;
+                    string val;
+                    if (NextRE("[^<&" + Regex.Escape(quote) + "]*", out val))
+                        value += val;
 
-                    value += val;
+                    if (Peek("<")) return Error("Character '<' is illegal in attribute value");
+                    else if (Peek("&"))
+                    {
+                        if (!Reference(out val)) return false;
+
+                        value += val;
+                    }
+                } while (!EOF && !Peek(quote));
+
+                if (!Next(quote)) return Error("Missing quotes on attribute value");
+            }
+            else
+            {
+                // Implicit: Recoverable == true
+                if (!hasName ) return false;
+
+                if (!hasEq || HasTrailingSpace)
+                {
+                    if (HasTrailingSpace) PushBack(" "); // Don't report missing required whitespace.
+
+                    return Error("Missing attribute value");
                 }
 
-            } while (!EOF && !Peek(quote));
+                string val;
+                if (Peek("&"))
+                {
+                    if (Reference(out val))
+                        Error("Missing quotes on attribute value");
+                }
+                else if (Name(out val)) Error("Missing quotes on attribute value");
+                else Error("Missing attribute value");
 
-            if (!Next(quote)) return Error("Quote");
+                return false;
+            }
+
+            if (!hasName)
+            {
+                // Set name to empty string to indicate that more attributes can follow.
+                name = "";
+                Error("Missing attribute name");
+
+                return false;
+            }
 
 #if (DEBUG)
             Console.WriteLine(string.Format("@{0}", name));
@@ -279,8 +328,29 @@ namespace XMLParser
 
             Dictionary<string, string> attrs = new Dictionary<string, string>();
             string name, value;
-            while (Attribute(out name, out value))
-                attrs.Add(name, value);
+            do
+            {
+                bool space = S();
+
+                if (Attribute(out name, out value))
+                {
+                    if (!space)
+                    {
+                        Error("Missing required whitespace");
+
+                        if (!Recoverable) return false;
+                    }
+
+                    if (!attrs.ContainsKey(name))
+                        attrs.Add(name, value);
+                    else
+                    {
+                        Error(string.Format("Duplicit attribute '{0}'", name));
+
+                        if (!Recoverable) return false;
+                    }
+                }
+            } while (name != null);
 
             Scope.End();
 
@@ -318,7 +388,7 @@ namespace XMLParser
             S();
             if (!Next(">")) return Error("End tag");
 
-            if (endTag != startTag) return Error("Mismatched tag", true);
+            if (endTag != startTag) return Error("Mismatched tag");
 
             // </Element>
 #if (DEBUG)
@@ -329,23 +399,24 @@ namespace XMLParser
             return true;
         }
 
+        // 	Eq ::= S? '=' S?
         private bool Eq()
         {
             return NextRE(@"\s*=\s*");
         }
 
-        private bool Error(string message = null, bool showLineNo = false)
+        private bool Error(string message)
         {
-            // Error was already reported.
-            if (HasError) return false;
+            // Non-recoverable error was already reported.
+            if (!Recoverable && HasError) return false;
 
-            if (showLineNo)
-                Console.WriteLine(string.Format("Error at line {0}: {1}", LineNo, message));
-            else
-                Console.WriteLine(string.Format("Error: {0}", message));
+            ErrorList.Add(string.Format("Error at line {0}: {1}", LineNo, message));
 
-            HasError = true;
-            Input = "";
+            if (!Recoverable)
+            {
+                HasError = true;
+                Input = "";
+            }
 
             return false;
         }
@@ -398,12 +469,12 @@ namespace XMLParser
          * NameStartChar ::= ":" | [A-Z] | "_" | [a-z] | [#xC0-#xD6] | [#xD8-#xF6] | [#xF8-#x2FF] | [#x370-#x37D] | [#x37F-#x1FFF] | [#x200C-#x200D] | [#x2070-#x218F] | [#x2C00-#x2FEF] | [#x3001-#xD7FF] | [#xF900-#xFDCF] | [#xFDF0-#xFFFD] | [#x10000-#xEFFFF]
          * NameChar ::= NameStartChar | "-" | "." | [0-9] | #xB7 | [#x0300-#x036F] | [#x203F-#x2040]
          */
-        private bool Name(out string tagName)
+        private bool Name(out string name)
         {
             string NameStartChar = @"[:A-Z_a-z\xC0-\xD6\xD8-\xF6\u00F8-\u02FF\u0370-\u037D\u037F-\u1FFF\u200C-\u200D\u2070-\u218F\u2C00-\u2FEF\u3001-\uD7FF\uF900-\uFDCF\uFDF0-\uFFFD]",
                    NameChar = @"[:A-Z_a-z\xC0-\xD6\xD8-\xF6\u00F8-\u02FF\u0370-\u037D\u037F-\u1FFF\u200C-\u200D\u2070-\u218F\u2C00-\u2FEF\u3001-\uD7FF\uF900-\uFDCF\uFDF0-\uFFFD.0-9\xB7\u0300-\u036F\u203F-\u2040-]*";
 
-            tagName = null;
+            name = null;
 
             string _input = Input;
 
@@ -412,7 +483,7 @@ namespace XMLParser
 
             NextRE(NameChar);
 
-            tagName = _input.Substring(0, _input.Length - Input.Length);
+            name = _input.Substring(0, _input.Length - Input.Length);
 
             return true;
         }
@@ -423,7 +494,7 @@ namespace XMLParser
 
             if (!Input.StartsWith(token)) return false;
 
-            LineNo += ReNewLine.Matches(token).Count;
+            Whitespaces(token);
 
             Input = Input.Substring(token.Length);
 
@@ -438,8 +509,7 @@ namespace XMLParser
             Match m = re.Match(Input);
             if (!m.Success) return false;
 
-            // New lines.
-            LineNo += ReNewLine.Matches(m.Value).Count;
+            Whitespaces(m.Value);
 
             Input = Input.Substring(m.Value.Length);
 
@@ -458,8 +528,7 @@ namespace XMLParser
 
             match = m.Groups[0].Value;
 
-            // New lines.
-            LineNo += ReNewLine.Matches(match).Count;
+            Whitespaces(match);
 
             Input = Input.Substring(match.Length);
 
@@ -492,7 +561,7 @@ namespace XMLParser
             if (!Name(out piName)) return false;
 
             string name, value;
-            while (Attribute(out name, out value)) ;
+            while (S() && Attribute(out name, out value)) ;
 
             // XML declaration.
 #if (DEBUG)
@@ -517,6 +586,12 @@ namespace XMLParser
             while (Comment() || S()) ;
 
             return true;
+        }
+
+        // Pushes string back to input.
+        private void PushBack(string input)
+        {
+            Input = input + Input;
         }
 
         /* Reference ::= EntityRef | CharRef
@@ -609,13 +684,17 @@ namespace XMLParser
             Input = "";
         }
 
+        // Handles LineNo increments and HasTrailingSpace flag setting based on consumed input string.
+        private void Whitespaces(string input)
+        {
+            HasTrailingSpace = ReTrailingWhitespace.IsMatch(input);
+
+            LineNo += ReNewLine.Matches(input).Count;
+        }
+
         public XML(string path)
         {
             Input = File.ReadAllText(path, Encoding.UTF8);
-
-            HasError = false;
-
-            LineNo = 1;
 
             Scope = new NSScope();
         }
@@ -627,7 +706,7 @@ namespace XMLParser
             if (!Next("<?xml")) return false;
 
             string name, value;
-            while (Attribute(out name, out value)) ;
+            while (S() && Attribute(out name, out value)) ;
 
             // XML declaration.
 #if (DEBUG)

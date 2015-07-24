@@ -69,6 +69,12 @@ namespace XAMLText
 
             if (success) Writer.WriteLine();
 
+            if (xml.Errors.Length > 0)
+            {
+                for (int i = 0; i < xml.Errors.Length; ++i)
+                    Console.WriteLine(xml.Errors[i]);
+            }
+
             return Exit(success ? 0 : 1);
         }
 
