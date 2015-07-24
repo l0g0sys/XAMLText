@@ -91,13 +91,16 @@ namespace XMLParser
         // Delegates.
         public delegate void OnStartElement(XML xml, string ns, string localName, Dictionary<string, string> attrs, bool empty);
 
+        // The flag indicating whether end of file was encountered on input.
+        private bool EOF { get { return Input.Length == 0; } }
+
         // Internal list of errors.
         private List<string> ErrorList = new List<string>();
 
         // The error(s) encountered.
         public string[] Errors { get { return ErrorList.ToArray(); } }
 
-        // The flag indicating whether error has occured.
+        // The flag indicating whether non-recoverable error has occured.
         private bool HasError = false;
 
         // The flag indicating whether consumed string has trailing space.
@@ -129,6 +132,13 @@ namespace XMLParser
 
         // Regular expression to match trailing whitespace.
         private static readonly Regex ReTrailingWhitespace = new Regex(@"\s$");
+
+        public XML(string path)
+        {
+            Input = File.ReadAllText(path, Encoding.UTF8);
+
+            Scope = new NSScope();
+        }
 
         /* Attribute ::= Name Eq AttValue
          * AttValue ::= '"' ([^<&"] | Reference)* '"' |  "'" ([^<&'] | Reference)* "'"
@@ -305,8 +315,6 @@ namespace XMLParser
             return false;
         }
 
-        private bool EOF { get { return Input.Length == 0; } }
-
         /* element ::= EmptyElemTag | STag content ETag
          * EmptyElemTag ::= '<' Name (S Attribute)* S? '/>'
          * STag ::= '<' Name (S Attribute)* S? '>'
@@ -405,10 +413,11 @@ namespace XMLParser
             return NextRE(@"\s*=\s*");
         }
 
+        // Reports an error.
         private bool Error(string message)
         {
             // Non-recoverable error was already reported.
-            if (!Recoverable && HasError) return false;
+            if (HasError) return false;
 
             ErrorList.Add(string.Format("Error at line {0}: {1}", LineNo, message));
 
@@ -421,6 +430,7 @@ namespace XMLParser
             return false;
         }
 
+        // Performs namespace lookup on name.
         private bool ExpandName(string name, out string ns, out string localName, out string prefix)
         {
             ns = localName = prefix = null;
@@ -458,7 +468,7 @@ namespace XMLParser
                 default:
                     ns = Scope.Resolve(prefix);
                     if (ns == null)
-                        return Error("Undeclared prefix");
+                        return Error(string.Format("Undeclared namespace prefix '{0}'", prefix));
                     break;
             }
 
@@ -488,6 +498,7 @@ namespace XMLParser
             return true;
         }
 
+        // Consumes string from input.
         private bool Next(string token)
         {
             if (EOF || Length < token.Length) return false;
@@ -501,6 +512,7 @@ namespace XMLParser
             return true;
         }
 
+        // Consumes input based on regular expression.
         private bool NextRE(string regex)
         {
             if (EOF) return false;
@@ -516,6 +528,7 @@ namespace XMLParser
             return true;
         }
 
+        // Consumes input based on regular expression.
         private bool NextRE(string regex, out string match)
         {
             match = null;
@@ -545,6 +558,7 @@ namespace XMLParser
             return Element();
         }
 
+        // Determines whether input starts with string.
         private bool Peek(string token)
         {
             if (EOF || Length < token.Length) return false;
@@ -552,6 +566,9 @@ namespace XMLParser
             return Input.StartsWith(token);
         }
 
+        /* PI ::= '<?' PITarget (S (Char* - (Char* '?>' Char*)))? '?>'
+         * PITarget ::= Name - (('X' | 'x') ('M' | 'm') ('L' | 'l'))
+         */
         private bool PI()
         {
             string piName;
@@ -560,16 +577,44 @@ namespace XMLParser
 
             if (!Name(out piName)) return false;
 
+            Dictionary<string, string> attrs = new Dictionary<string, string>();
             string name, value;
-            while (S() && Attribute(out name, out value)) ;
+            do
+            {
+                bool space = S();
 
-            // XML declaration.
+                if (Attribute(out name, out value))
+                {
+                    if (!space)
+                    {
+                        Error("Missing required whitespace");
+
+                        if (!Recoverable) return false;
+                    }
+
+                    if (!attrs.ContainsKey(name))
+                        attrs.Add(name, value);
+                    else
+                    {
+                        Error(string.Format("Duplicit attribute '{0}'", name));
+
+                        if (!Recoverable) return false;
+                    }
+                }
+            } while (name != null);
+
 #if (DEBUG)
             Console.WriteLine(string.Format("<?{0}?>", piName));
 #endif
             S();
 
-            return Next("?>");
+            if (!Next("?>")) return false;
+
+            // Check for XML declaration.
+            if (piName.Equals("xml", StringComparison.InvariantCultureIgnoreCase))
+                Error("Unexpected XML declaration");
+
+            return true;
         }
 
         /* prolog ::= XMLDecl? Misc* (doctypedecl Misc*)?
@@ -671,6 +716,7 @@ namespace XMLParser
             return true;
         }
 
+        // 	S ::= (#x20 | #x9 | #xD | #xA)+
         private bool S()
         {
             if (EOF) return false;
@@ -692,21 +738,39 @@ namespace XMLParser
             LineNo += ReNewLine.Matches(input).Count;
         }
 
-        public XML(string path)
-        {
-            Input = File.ReadAllText(path, Encoding.UTF8);
-
-            Scope = new NSScope();
-        }
-
         /* XMLDecl ::= '<?xml' VersionInfo EncodingDecl? SDDecl? S? '?>'
+         * VersionInfo ::= S 'version' Eq ("'" VersionNum "'" | '"' VersionNum '"')
+         * VersionNum ::= '1.' [0-9]+
          */
         private bool XMLDecl()
         {
             if (!Next("<?xml")) return false;
 
+            Dictionary<string, string> attrs = new Dictionary<string, string>();
             string name, value;
-            while (S() && Attribute(out name, out value)) ;
+            do
+            {
+                bool space = S();
+
+                if (Attribute(out name, out value))
+                {
+                    if (!space)
+                    {
+                        Error("Missing required whitespace");
+
+                        if (!Recoverable) return false;
+                    }
+
+                    if (!attrs.ContainsKey(name))
+                        attrs.Add(name, value);
+                    else
+                    {
+                        Error(string.Format("Duplicit attribute '{0}'", name));
+
+                        if (!Recoverable) return false;
+                    }
+                }
+            } while (name != null);
 
             // XML declaration.
 #if (DEBUG)
