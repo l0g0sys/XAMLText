@@ -52,10 +52,10 @@ namespace XAMLText
                 return Exit(1);
             }
 
-            XML xml;
+            Xml xml;
             try
             {
-                xml = new XML(Input);
+                xml = new Xml(Input);
                 xml.StartElement = StartElement;
             }
             catch (Exception e)
@@ -79,7 +79,7 @@ namespace XAMLText
         }
 
         // Invoked when start tag of element was encountered.
-        static void StartElement(XML xml, string ns, string localName, Dictionary<string, string> attrs, bool empty)
+        static void StartElement(Xml xml, string ns, string localName, Dictionary<string, string> attrs, bool empty)
         {
             if (localName != "Catalog" || ns != "clr-namespace:POESKillTree.Localization.XAML" || attrs.Count == 0 || !attrs.ContainsKey("Message")) return;
 
@@ -115,7 +115,7 @@ namespace XAMLText
         }
 
         // Writes message to output.
-        static void WriteMessage(XML xml, string message, string context)
+        static void WriteMessage(Xml xml, string message, string context)
         {
             try
             {
@@ -139,7 +139,7 @@ namespace XAMLText
         }
 
         // Writes plural message to output.
-        static void WritePlural(XML xml, string message, string plural, string n, string context)
+        static void WritePlural(Xml xml, string message, string plural, string n, string context)
         {
             try
             {

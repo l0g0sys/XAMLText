@@ -7,7 +7,7 @@ using System.Text.RegularExpressions;
 
 namespace XMLParser
 {
-    public class XML
+    public class Xml
     {
         // Namespace scope.
         class NSScope
@@ -89,7 +89,7 @@ namespace XMLParser
         public const string XMLNS = "http://www.w3.org/2000/xmlns/";
 
         // Delegates.
-        public delegate void OnStartElement(XML xml, string ns, string localName, Dictionary<string, string> attrs, bool empty);
+        public delegate void OnStartElement(Xml xml, string ns, string localName, Dictionary<string, string> attrs, bool empty);
 
         // The flag indicating whether end of file was encountered on input.
         private bool EOF { get { return Input.Length == 0; } }
@@ -122,7 +122,7 @@ namespace XMLParser
         public bool Recoverable = false;
 
         // Namespace scope.
-        private NSScope Scope;
+        private NSScope Scope = new NSScope();
 
         // Start element handler.
         public OnStartElement StartElement;
@@ -133,11 +133,9 @@ namespace XMLParser
         // Regular expression to match trailing whitespace.
         private static readonly Regex ReTrailingWhitespace = new Regex(@"\s$");
 
-        public XML(string path)
+        public Xml(string path)
         {
             Input = File.ReadAllText(path, Encoding.UTF8);
-
-            Scope = new NSScope();
         }
 
         /* Attribute ::= Name Eq AttValue
@@ -186,7 +184,8 @@ namespace XMLParser
 
                 if (!hasEq || HasTrailingSpace)
                 {
-                    if (HasTrailingSpace) PushBack(" "); // Don't report missing required whitespace.
+                    // Don't report missing required whitespace.
+                    if (HasTrailingSpace) PushBack(" "); // FIXME: Should push back consumed whitespace sequence.
 
                     return Error("Missing attribute value");
                 }
