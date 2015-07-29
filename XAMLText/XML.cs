@@ -217,12 +217,18 @@ namespace XmlParser
                 if (Peek("&"))
                 {
                     if (Reference(out val))
-                        Error("Missing quotes on attribute value");
+                        Error("Missing quotes on attribute value"); // Recovered, continue.
+                    else
+                        return false;
                 }
-                else if (Name(out val)) Error("Missing quotes on attribute value");
-                else Error("Missing attribute value");
+                else if (Name(out val))
+                    Error("Missing quotes on attribute value"); // Recovered, continue.
+                else
+                {
+                    Error("Missing attribute value");
 
-                return false;
+                    return false;
+                }
             }
 
             if (!hasName)
