@@ -5,12 +5,12 @@ using System.IO;
 using System.Text;
 using System.Text.RegularExpressions;
 
-namespace XMLParser
+namespace XmlParser
 {
     public class Xml
     {
         // Namespace scope.
-        class NSScope
+        class NsScope
         {
             // Declared namespaces in current scope.
             private Dictionary<string, string> Current = new Dictionary<string, string>();
@@ -22,7 +22,7 @@ namespace XMLParser
             private Stack<Dictionary<string, string>> Stack = new Stack<Dictionary<string, string>>();
 
             // Initializes scope.
-            public NSScope()
+            public NsScope()
             {
                 Stack.Push(
                     new Dictionary<string, string>()
@@ -122,7 +122,7 @@ namespace XMLParser
         public bool Recoverable = false;
 
         // Namespace scope.
-        private NSScope Scope = new NSScope();
+        private NsScope Scope = new NsScope();
 
         // Start element handler.
         public OnStartElement StartElement;
