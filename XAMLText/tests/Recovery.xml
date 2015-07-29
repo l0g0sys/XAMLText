@@ -1,7 +1,7 @@
 ﻿<?xml version="1.0" encoding="utf-8" ?>
 <Root>
     <x:UndeclaredNamespacePrefix Good="Good" />
-    <DupliciteAttribute Good="Good" Good="Good" />
+    <DuplicitAttribute Good="Good" Good="Good" />
     <MissingRequiredWhitespace Good="Good"Bad="Bad" />
     <MissingAttributeValue Good="Good" Bad Good2="Good" />
     <MissingAttributeValue Good="Good" Bad= Good2="Good" />
@@ -13,5 +13,6 @@
     <IllegalAttributeValue Good="Good" Bad="Bad >
         <Valid/>
     </IllegalAttributeValue>
+    <ExpectingEndTag></ExpectingEndTagBad>
     <Valid/>
 </Root>

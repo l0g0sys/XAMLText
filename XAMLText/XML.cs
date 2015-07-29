@@ -89,7 +89,11 @@ namespace XmlParser
         public const string XMLNS = "http://www.w3.org/2000/xmlns/";
 
         // Delegates.
-        public delegate void OnStartElement(Xml xml, string ns, string localName, Dictionary<string, string> attrs, bool empty);
+        public delegate void OnEndElement(Xml xml, string ns, string localName);
+        public delegate void OnStartElement(Xml xml, string ns, string localName, Dictionary<string, string> attrs, bool isEmpty);
+
+        // End element handler.
+        public OnEndElement EndElement;
 
         // The flag indicating whether end of file was encountered on input.
         private bool EOF { get { return Input.Length == 0; } }
@@ -382,15 +386,15 @@ namespace XmlParser
 
             S();
 
-            string ns, localName, prefix;
+            string startNs, startLocalName, startPrefix;
             if (Next("/>"))
             {
                 // <Element/>
-                if (!ExpandName(startTag, out ns, out localName, out prefix) && !Recoverable) return false;
+                if (!ExpandName(startTag, out startNs, out startLocalName, out startPrefix) && !Recoverable) return false;
 #if (DEBUG)
                 Console.WriteLine(string.Format("<{0}/> on line {1}", startTag, line));
 #endif
-                if (StartElement != null) StartElement(this, ns, localName, attrs, true);
+                if (StartElement != null) StartElement(this, startNs, startLocalName, attrs, true);
 
                 Scope.Leave();
 
@@ -399,11 +403,11 @@ namespace XmlParser
             else if (!Next(">")) return Error("Start tag");
 
             // <Element>
-            if (!ExpandName(startTag, out ns, out localName, out prefix) && !Recoverable) return false;
+            if (!ExpandName(startTag, out startNs, out startLocalName, out startPrefix) && !Recoverable) return false;
 #if (DEBUG)
             Console.WriteLine(string.Format("<{0}> on line {1}", startTag, line));
 #endif
-            if (StartElement != null) StartElement(this, ns, localName, attrs, false);
+            if (StartElement != null) StartElement(this, startNs, startLocalName, attrs, false);
 
             Content();
 
@@ -412,12 +416,23 @@ namespace XmlParser
             S();
             if (!Next(">")) return Error("End tag");
 
-            if (endTag != startTag) return Error("Mismatched tag");
-
             // </Element>
+            string endNs, endLocalName, endPrefix;
+            if (!ExpandName(endTag, out endNs, out endLocalName, out endPrefix) && !Recoverable) return false;
+
+            if (endNs != startNs || endLocalName != startLocalName)
+            {
+                Error(string.Format("Expecting end tag </{0}>", startTag));
+
+                if (!Recoverable) return false;
+            }
+
 #if (DEBUG)
             Console.WriteLine(string.Format("</{0}>", startTag));
 #endif
+            // Invoke EndElement using start tag's namespace and local name due to possible recovery.
+            if (EndElement != null) EndElement(this, startNs, startLocalName);
+
             Scope.Leave();
 
             return true;

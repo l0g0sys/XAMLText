@@ -79,7 +79,7 @@ namespace XAMLText
         }
 
         // Invoked when start tag of element was encountered.
-        static void StartElement(Xml xml, string ns, string localName, Dictionary<string, string> attrs, bool empty)
+        static void StartElement(Xml xml, string ns, string localName, Dictionary<string, string> attrs, bool isEmpty)
         {
             if (localName != "Catalog" || ns != "clr-namespace:POESKillTree.Localization.XAML" || attrs.Count == 0 || !attrs.ContainsKey("Message")) return;
 
