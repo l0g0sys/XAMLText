@@ -1,12 +1,17 @@
 ﻿<?xml version="1.0" encoding="utf-8" ?>
 <Root>
+    <x:UndeclaredNamespacePrefix Good="Good" />
     <DupliciteAttribute Good="Good" Good="Good" />
     <MissingRequiredWhitespace Good="Good"Bad="Bad" />
     <MissingAttributeValue Good="Good" Bad Good2="Good" />
     <MissingAttributeValue Good="Good" Bad= Good2="Good" />
     <MissingQuotesOnAttributeValue Good="Good" Bad=Bad Good2="Good" />
-    <MissingQuotesOnAttributeValue Good="Good" Bad=&#32; Good2="Good" /><!-- &#32; isn't treated as attribute value in VS -->
+    <MissingQuotesOnAttributeValue Good="Good" Bad=&#32; Good2="Good" />
     <MissingAttributeName Good="Good" ="Text" Good2="Good" />
     <MissingAttributeName Good="Good" "Text" Good2="Good" />
+    <IllegalAttributeValue Good="Good" Bad="Bad />
+    <IllegalAttributeValue Good="Good" Bad="Bad >
+        <Valid/>
+    </IllegalAttributeValue>
     <Valid/>
 </Root>

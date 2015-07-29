@@ -119,13 +119,19 @@ namespace XmlParser
         public int LineNumber { get { return LineNo; } }
 
         // The flag indicating whether error recovery is enabled.
+#if (DEBUG)
+        public bool Recoverable = true;
+#else
         public bool Recoverable = false;
-
+#endif
         // Namespace scope.
         private NsScope Scope = new NsScope();
 
         // Start element handler.
         public OnStartElement StartElement;
+
+        // Regular expression to match end of element start tag.
+        private static readonly Regex ReStartTagBacktrack = new Regex(@"\/?>", RegexOptions.RightToLeft);
 
         // Regular expression to match new line.
         private static readonly Regex ReNewLine = new Regex(@"\r\n?|\n");
@@ -141,7 +147,7 @@ namespace XmlParser
         /* Attribute ::= Name Eq AttValue
          * AttValue ::= '"' ([^<&"] | Reference)* '"' |  "'" ([^<&'] | Reference)* "'"
          */
-        private bool Attribute(out string name, out string value)
+        private bool Attribute(out string name, out string value, Regex backtrack = null)
         {
             name = value = null;
 
@@ -166,7 +172,20 @@ namespace XmlParser
                     if (NextRE("[^<&" + Regex.Escape(quote) + "]*", out val))
                         value += val;
 
-                    if (Peek("<")) return Error("Character '<' is illegal in attribute value");
+                    if (Peek("<"))
+                    {
+                        Error("Character '<' is illegal in attribute value");
+
+                        // Recovery backtracking.
+                        if (Recoverable && backtrack != null)
+                        {
+                            Match m = backtrack.Match(value);
+                            if (m.Success)
+                                PushBack(value.Substring(m.Index));
+                        }
+
+                        return false;
+                    }
                     else if (Peek("&"))
                     {
                         if (!Reference(out val)) return false;
@@ -339,7 +358,7 @@ namespace XmlParser
             {
                 bool space = S();
 
-                if (Attribute(out name, out value))
+                if (Attribute(out name, out value, ReStartTagBacktrack))
                 {
                     if (!space)
                     {
@@ -367,8 +386,7 @@ namespace XmlParser
             if (Next("/>"))
             {
                 // <Element/>
-                if (!ExpandName(startTag, out ns, out localName, out prefix))
-                    return Error("Undeclared prefix");
+                if (!ExpandName(startTag, out ns, out localName, out prefix) && !Recoverable) return false;
 #if (DEBUG)
                 Console.WriteLine(string.Format("<{0}/> on line {1}", startTag, line));
 #endif
@@ -381,8 +399,7 @@ namespace XmlParser
             else if (!Next(">")) return Error("Start tag");
 
             // <Element>
-            if (!ExpandName(startTag, out ns, out localName, out prefix))
-                return Error("Undeclared prefix");
+            if (!ExpandName(startTag, out ns, out localName, out prefix) && !Recoverable) return false;
 #if (DEBUG)
             Console.WriteLine(string.Format("<{0}> on line {1}", startTag, line));
 #endif
